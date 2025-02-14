@@ -58,7 +58,7 @@ passport.use(new JwtStrategy(jwtOptions, (jwt_payload, done) => {
 
 
 
-// Ca marche
+// Test API
 
 app.get("/test", (req, res) => {
     res.send("hello");
@@ -68,12 +68,13 @@ app.get("/test", (req, res) => {
 
 
 
+// Création d'un utilisateur
 
 app.post("/register", async (req, res) => {
     const { email, password } = req.body;
     
     db.query("SELECT * FROM users WHERE email = ?", [email], async (err, results) => {
-        if (err) return res.status(500).json({ error: "Erreur serveur" });
+        if (err) return res.status(500).json({ error: "Erreur" });
         if (results.length > 0) return res.status(400).json({ error: "Email déjà utilisé" });
 
         const hashedPassword = await bcrypt.hash(password, 10);
@@ -88,11 +89,14 @@ app.post("/register", async (req, res) => {
 
 
 
+
+// Connexion d'un utilisateur
+
 app.post("/login", (req, res) => {
     const { email, password } = req.body;
 
     db.query("SELECT * FROM users WHERE email = ?", [email], async (err, results) => {
-        if (err) return res.status(500).json({ error: "Erreur serveur" });
+        if (err) return res.status(500).json({ error: "Erreur" });
         if (results.length === 0) return res.status(401).json({ error: "Bad credentials" });
 
         const user = results[0];
@@ -109,9 +113,11 @@ app.post("/login", (req, res) => {
 
 
 
+// Infos de l'utilisateur
+
 app.get("/profil", passport.authenticate("jwt", { session: false }), (req, res) => {
     db.query("SELECT email, role FROM users WHERE id = ?", [req.user.id], (err, results) => {
-        if (err) return res.status(500).json({ error: "Erreur serveur" });
+        if (err) return res.status(500).json({ error: "Erreur" });
         if (results.length === 0) return res.status(404).json({ error: "Utilisateur non trouvé" });
 
         res.json(results[0]);
@@ -121,11 +127,14 @@ app.get("/profil", passport.authenticate("jwt", { session: false }), (req, res) 
 
 
 
+
+// Liste de tous les users
+
 app.get("/users/list", passport.authenticate("jwt", { session: false }), (req, res) => {
     if (req.user.role !== "admin") return res.status(403).json({ error: "Accès refusé" });
 
     db.query("SELECT id, email, role FROM users", (err, results) => {
-        if (err) return res.status(500).json({ error: "Erreur serveur" });
+        if (err) return res.status(500).json({ error: "Erreur" });
         res.json(results);
     });
 });
@@ -134,14 +143,14 @@ app.get("/users/list", passport.authenticate("jwt", { session: false }), (req, r
 
 
 
-
+// Ban un utilisateur
 
 app.post("/users/ban", passport.authenticate("jwt", { session: false }), (req, res) => {
     if (req.user.role !== "admin") return res.status(403).json({ error: "Accès refusé" });
 
     const { email } = req.body;
     db.query("UPDATE users SET isBanned = TRUE WHERE email = ?", [email], (err) => {
-        if (err) return res.status(500).json({ error: "Erreur serveur" });
+        if (err) return res.status(500).json({ error: "Erreur" });
         res.json({ message: "Utilisateur banni" });
     });
 });
@@ -149,6 +158,8 @@ app.post("/users/ban", passport.authenticate("jwt", { session: false }), (req, r
 
 
 
+
+// Upload un fichier sur le serveur
 
 const storage = multer.diskStorage({
     destination: "uploads/",
@@ -165,7 +176,7 @@ app.post("/add-file", passport.authenticate("jwt", { session: false }), upload.s
 
 
 
-
+// Supprime un utilisateur
 
 app.post("/users/rm", passport.authenticate("jwt", { session: false }), (req, res) => {
     if (req.user.role !== "admin") return res.status(403).json({ error: "Accès refusé" });
@@ -185,6 +196,8 @@ app.post("/users/rm", passport.authenticate("jwt", { session: false }), (req, re
 
 
 
+// Passe un utilisateur classique en admin
+
 app.post("/user/up", passport.authenticate("jwt", { session: false }), (req, res) => {
     if (req.user.role !== "admin") return res.status(403).json({ error: "Accès refusé" });
 
@@ -201,6 +214,9 @@ app.post("/user/up", passport.authenticate("jwt", { session: false }), (req, res
 
 
 
+
+
+// Passe un admin en user normal
 
 app.post("/user/down", passport.authenticate("jwt", { session: false }), (req, res) => {
     if (req.user.role !== "admin") return res.status(403).json({ error: "Accès refusé" });
